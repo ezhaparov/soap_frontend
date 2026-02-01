@@ -1,11 +1,30 @@
 <template>
   <div class="container-custom">
+    <div class="format-switch">
+      <button class="btn-json"
+        :class="{ active: format === 'json' }"
+        @click="changeFormat('json')"
+      >
+        JSON
+      </button>
+
+      <button class="btn-xml"
+        :class="{ active: format === 'xml' }"
+        @click="changeFormat('xml')"
+      >
+        XML
+      </button>
+    </div>
     <div class="header-section">
       <div>
         <h2 class="page-title">Customers</h2>
         <p class="page-subtitle">Manage your customer database</p>
       </div>
-      <button class="btn-create" @click="openCreate">
+      <button
+        v-if="format === 'json'"
+        class="btn-create"
+        @click="openCreate"
+      >
         <span class="btn-icon">+</span>
         Add Customer
       </button>
@@ -17,7 +36,7 @@
     </div>
     <div v-if="error" class="status-message error">{{ error }}</div>
 
-    <div class="customers-grid">
+    <div v-if="format === 'json'" class="customers-grid">
       <div class="customer-card" v-for="c in customers" :key="c.idCustomer">
         <div class="card-header-custom">
           <div class="avatar">{{ getInitials(c.firstName, c.lastName) }}</div>
@@ -49,6 +68,15 @@
             Delete
           </button>
         </div>
+      </div>
+    </div>
+
+    <div v-if="format === 'xml'" class="xml-view">
+      <div class="xml-header">
+        <h3 class="xml-title">XML response</h3>
+      </div>
+      <div>
+        <pre>{{ xmlData }}</pre>
       </div>
     </div>
 
@@ -167,6 +195,10 @@ export default {
   data() {
     return {
       customers: [],
+      xmlCustomers: [],
+      format: "json",
+      xmlData: '',
+      xmlViewMode: "table",
       loading: false,
       saving: false,
       deleting: false,
@@ -208,8 +240,15 @@ export default {
       this.loading = true;
       this.error = "";
       try {
-        const res = await CustomerService.getAll();
-        this.customers = res.data || [];
+        const res = await CustomerService.getAllWithFormat(this.format);
+
+        if (this.format === "json") {
+          this.customers = res.data || [];
+          this.xmlData = "";
+          this.xmlCustomers = [];
+        } else {
+          this.xmlData = res.data || "";
+        }
       } catch (e) {
         this.error =
             (e.response && e.response.data && e.response.data.message) ||
@@ -218,6 +257,12 @@ export default {
       } finally {
         this.loading = false;
       }
+    },
+
+    changeFormat(format) {
+      this.format = format;
+      this.error = "";
+      this.load();
     },
 
     clearFieldErrors() {
@@ -528,6 +573,46 @@ export default {
   font-size: 14px;
 }
 
+.btn-json {
+  margin: 10px 0 10px 0;
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  background: linear-gradient(135deg, #4bd66e 0%, #36cead 100%);
+  color: #ffffff;
+}
+
+.btn-xml {
+  margin: 10px 0 10px 10px;
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  background: linear-gradient(135deg, #4bd66e 0%, #36cead 100%);
+  color: #ffffff;
+}
+
+.btn-json:hover {
+  color: #2c5282;
+  background: linear-gradient(135deg, #c0dff0 0%, #b8d4eb 100%);
+  cursor: pointer;
+}
+
+.btn-xml:hover {
+  color: #2c5282;
+  background: linear-gradient(135deg, #c0dff0 0%, #b8d4eb 100%);
+  cursor: pointer;
+}
+
 .btn-edit {
   background: linear-gradient(135deg, #d4e9f7 0%, #cfe2f3 100%);
   color: #2c5282;
@@ -582,6 +667,116 @@ export default {
   font-size: 22px;
   font-weight: 600;
   color: #4a5568;
+}
+
+.xml-view {
+  margin-top: 16px;
+}
+
+.xml-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.xml-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.xml-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-xml-view {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-xml-view.active {
+  border-color: rgba(0,0,0,0.25);
+  background: rgba(0,0,0,0.04);
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,0.10);
+  background: #fff;
+}
+
+.customers-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+}
+
+.customers-table thead th {
+  text-align: left;
+  padding: 12px 14px;
+  font-weight: 700;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(0,0,0,0.10);
+  position: sticky;
+  top: 0;
+  background: #fff;
+}
+
+.customers-table tbody td {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.customers-table tbody tr:nth-child(even) {
+  background: rgba(0,0,0,0.02);
+}
+
+.idx-cell {
+  width: 56px;
+  color: rgba(0,0,0,0.55);
+}
+
+.id-cell {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  color: rgba(0,0,0,0.70);
+  white-space: nowrap;
+}
+
+.phone-cell,
+.email-cell {
+  white-space: nowrap;
+}
+
+.empty-cell {
+  text-align: center;
+  padding: 18px;
+  color: rgba(0,0,0,0.55);
+}
+
+.raw-wrap {
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,0.10);
+  background: #fff;
+  padding: 12px;
+}
+
+.raw-xml {
+  margin: 0;
+  white-space: pre-wrap;     /* чтобы переносилось */
+  word-break: break-word;    /* чтобы длинные куски не ломали */
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .btn-close {
